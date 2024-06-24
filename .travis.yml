@@ -1,8 +1,8 @@
-language: __sardonyx__
+language: shell
 
-stages:
-  - build
-stage: build
+# stages:
+#   - build
+# stage: build
 
 jobs:
   include:
@@ -18,103 +18,107 @@ jobs:
         - popd
         - python --version
         - sudo python -m pip install virtualenv==20.0.2
-        - apt list --installed
-    - language: minimal
-      dist: jammy
-      group: edge
+    - dist: jammy
+      env:
+        - RELEASE=jammy
       name: jammy
-      os: linux
-    - language: minimal
-      dist: focal
-      group: edge
-      name: focal
-      os: linux   
-    - language: minimal
-      dist: bionic
-      group: dev
+    - dist: focal
+      env:
+        - RELEASE=focal
+      name: focal   
+    - dist: bionic
+      env:
+        - RELEASE=bionic
       name: bionic
-      os: linux
-    - language: minimal
-      dist: xenial
-      group: edge
+    - dist: xenial
+      env:
+        - RELEASE=xenial
       name: xenial
-      os: linux
-    - dist: trusty
-      name: trusty
-      os: linux
-      if: NOT env(VERSION) =~ -dev$ AND NOT env(VERSION) =~ /^3\.([789]|1\d+)/
-    - dist: precise
-      name: precise
-      os: linux
-      if: NOT env(VERSION) =~ -dev$ AND NOT env(VERSION) =~ ^pypy AND NOT env(VERSION) =~ /^3\.([789]|1\d+)/
-    - arch: ppc64le
-      dist: xenial
-      name: xenial-ppc64le
-      os: linux
-      language: minimal
-    - arch: ppc64le
-      dist: bionic
-      name: bionic-ppc64le
-      os: linux
-      language: minimal
-    - arch: ppc64le
-      dist: focal
-      name: focal-ppc64le
-      os: linux
     - arch: ppc64le
       dist: jammy
+      env:
+        - RELEASE=jammy
       name: jammy-ppc64le
-      os: linux      
-    - arch: s390x
-      dist: xenial
-      name: xenial-s390x
-      os: linux
-      language: minimal
-    - arch: s390x
+    - arch: ppc64le
+      dist: focal
+      env:
+        - RELEASE=focal
+      name: focal-ppc64le
+    - arch: ppc64le
       dist: bionic
-      name: bionic-s390x
-      os: linux
-      language: minimal
+      env:
+        - RELEASE=bionic
+      name: bionic-ppc64le
+    - arch: ppc64le
+      dist: xenial
+      env:
+        - RELEASE=xenial
+      name: xenial-ppc64le
+    - arch: s390x
+      dist: jammy
+      env:
+        - RELEASE=jammy
+      name: jammy-s390x
     - arch: s390x
       dist: focal
+      env:
+        - RELEASE=focal
       name: focal-s390x
-      os: linux
-      language: minimal
-    - arch: arm64
-      dist: xenial
-      name: xenial-arm64
-      language: minimal
-    - arch: arm64
+    - arch: s390x
       dist: bionic
-      name: bionic-arm64
-      language: minimal
-    - arch: arm64
-      dist: focal
-      name: focal-arm64
-      language: minimal
+      env:
+        - RELEASE=bionic
+      name: bionic-s390x
+    - arch: s390x
+      dist: xenial
+      env:
+        - RELEASE=xenial
+      name: xenial-s390x
     - arch: arm64
       dist: jammy
+      env:
+        - RELEASE=jammy
       name: jammy-arm64
-      language: minimal
+    - arch: arm64
+      dist: focal
+      env:
+        - RELEASE=focal
+      name: focal-arm64
+    - arch: arm64
+      dist: bionic
+      env:
+        - RELEASE=bionic
+      name: bionic-arm64
+    - arch: arm64
+      dist: xenial
+      env:
+        - RELEASE=xenial
+      name: xenial-arm64
 
-  allow_failures:
-    - name: freebsd
+allow_failures:
+  - name: freebsd
 
 env:
   global:
-    - VERSION=3.8-dev
+    - VERSION=3.13-dev
   # - ALIAS=nightly
 
 install:
+  # - git clone https://github.com/pyenv/pyenv-update.git $(pyenv root)/plugins/pyenv-update
+  # - pyenv update
   - pushd /opt/pyenv/
   - sudo git config --global --add safe.directory /opt/pyenv
   - sudo git checkout master
   - sudo git pull
   - popd
-  - if [[ $(lsb_release -cs) == "jammy" &&  $(uname -m) == "ppc64le" ]]; then alias python=python3; fi
+  - alias python=python3
+  - python -m pip install virtualenv
+  - sudo pip install --upgrade pip
+  - sudo pip install setuptools
+  #- if [[ $(lsb_release -cs) == "jammy" &&  $(uname -m) == "ppc64le" ]]; then alias python=python3; fi
   # As of this writing:
   # * Py2 is EOL
-  #   * however, pip (https://pip.pypa.io/en/latest/development/release-process/#python-2-support) intends to keep supporting it as long as practical
+  #   * however, pip (https://pip.pypa.io/en/latest/develss/#python-2-support) intends to keep supporting it as long as practical
   #   * Virtualenv also supports old versions (e.g. 3.4) far longer than PSF does
   # * all images have `virtualenv` on PATH but vary in whether it's per-user or global and which Python installation it belongs to
   #   * some of these preinstalled `virtualenv`s don't support 3.9+
@@ -152,7 +156,9 @@ before_script:
       python --version
     fi
 
-script: ./bin/compile
+script: 
+  - sudo apt-get update && sudo apt-get install build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev curl libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev -y
+  - ./bin/compile
 
 after_success: ./bin/archive
 
@@ -174,11 +180,3 @@ addons:
       - default
     cache_control: public
 
-notifications:
-  email: false
-  slack:
-    rooms:
-      secure: "ZZb1XxoEiVqSUYTwQDxDLasQwVyF5s2FUoTI4Hcf66GGr50seBgWvcHpCkbtDbntluoyUB/s9MyuVAsIq/tIu+z2EQpKQN8PGZXYZEb2DzEkRbekyUx4MQufvY3mbIwv69SSs12uq90Ce2R3S+okPvbjCB7HzEufW9wvtl6TwME="
-    on_success: never
-    on_failure: always
-    on_pull_requests: false
